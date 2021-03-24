@@ -57,7 +57,11 @@ void addRandomEdge(const int nNodes, Node nodes[]) {
 }
 
 void assign(Node *conflictingSet[], int conflictingSetSize) {
-  printf("Using %d threads\n", omp_get_num_threads());
+  #pragma omp parallel
+  {
+    #pragma omp single
+    printf("Using %d threads\n", omp_get_num_threads());
+  }
   #pragma omp parallel for
   for (int i = 0; i < conflictingSetSize; ++i) {
     Node *conflictingNode = conflictingSet[i];
