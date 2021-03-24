@@ -142,9 +142,9 @@ int main(int argc, char *argv[]) {
   // coloring end
   gettimeofday(&end, NULL);
 
-  float duration = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f
+  float diff = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
 
-  printf("%lld", diff);
+  printf("%f", diff);
 
   //free node neighbors
   for (int i = 0; i < nNodes; ++i) {
