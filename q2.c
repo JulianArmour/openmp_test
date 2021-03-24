@@ -167,6 +167,10 @@ int main(int argc, char *argv[]) {
 
   printf("Duration: %ld milliseconds\n", diff);
 
+  //todo print out maximum node degree
+
+  //todo print out maximum color used
+
   //free node neighbors
   for (int i = 0; i < nNodes; ++i) {
     free(nodes[i].neighbors);
