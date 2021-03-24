@@ -86,12 +86,15 @@ Node **detectConflicts(int *newConflictingSetSize, Node *conflictingSet[], int c
   Node **newConflictingSet = malloc(sizeof(Node*) * conflictingSetSize);
   int theNewConflictingSetSize = 0;
 
+  #pragma omp parallel for
   for (int i = 0; i < conflictingSetSize; ++i) {
     Node *conflictingNode = conflictingSet[i];
     for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
       Node *neighbor = conflictingNode->neighbors[j];
       if (conflictingNode->color == neighbor->color && conflictingNode->id > neighbor->id) {
-        int insertIdx = theNewConflictingSetSize++;
+        int insertIdx;
+        #pragma omp atomic capture
+        insertIdx = theNewConflictingSetSize++;
         newConflictingSet[insertIdx] = conflictingNode;
       }
     }
