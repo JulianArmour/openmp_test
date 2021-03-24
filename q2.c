@@ -10,18 +10,17 @@ typedef struct Node {
     int color;
     // the number of neighbors
     int nNeighbors;
-    // contains the ids of the neighbors
-    int *neighbors;
+    // neighbors is an array of Node pointers
+    struct Node **neighbors;
 } Node;
 
 
 /*
  * returns 1 if node1 is adjacent to node2, else 0.
  */
-int areAdjacent(int node1ID, int node2ID, Node nodes[]) {
-  Node *node1 = &nodes[node1ID];
+int areAdjacent(Node *node1, Node *node2) {
   for (int i = 0; i < node1->nNeighbors; ++i) {
-    if (node1->neighbors[i] == node2ID)
+    if (node1->neighbors[i] == node2)
       return 1;
   }
   return 0;
@@ -42,33 +41,34 @@ void addRandomEdge(const int nNodes, Node nodes[]) {
       // don't create an edge to and from the same node
       if (node1 == node2)
         continue;
-      if (areAdjacent(node1, node2, nodes))
-        continue;
 
       Node *n1 = &nodes[node1];
       Node *n2 = &nodes[node2];
+      if (areAdjacent(n1, n2))
+        continue;
+
       //add node 2 to the neighbors of node 1
-      n1->neighbors[n1->nNeighbors++] = n2->id;
+      n1->neighbors[n1->nNeighbors++] = n2;
       //add node 1 to the neighbors of node 2
-      n2->neighbors[n2->nNeighbors++] = n1->id;
+      n2->neighbors[n2->nNeighbors++] = n1;
       return;
     }
   }
 }
 
-void assign(Node nodes[], const int conflictingIdSet[], int conflictingSetSize) {
+void assign(Node *conflictingSet[], int conflictingSetSize) {
 #pragma omp parallel for
   for (int i = 0; i < conflictingSetSize; ++i) {
-    Node *conflictingNode = &nodes[conflictingIdSet[i]];
+    Node *conflictingNode = conflictingSet[i];
     int smallestAdjacentColor = 1;
     int foundSmallest;
     // keep incrementing smallestAdjacentColor until we find one that isn't used by a neighbor (at the time of reading)
     do {
       foundSmallest = 1;
       for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
-        int neighborID = conflictingNode->neighbors[j];
+        Node *neighbor = conflictingNode->neighbors[j];
 #pragma omp atomic read
-        int neighborColor = nodes[neighborID].color;
+        int neighborColor = neighbor->color;
         if (neighborColor == smallestAdjacentColor) {
           foundSmallest = 0;
           smallestAdjacentColor++;
@@ -81,23 +81,23 @@ void assign(Node nodes[], const int conflictingIdSet[], int conflictingSetSize) 
   }
 }
 
-int *detectConflicts(int *newConflictingSetSize, Node nodes[], const int conflictingIdSet[], int conflictingSetSize) {
-  int *newConflictingIdSet = malloc(sizeof(*newConflictingIdSet) * conflictingSetSize);
+Node **detectConflicts(int *newConflictingSetSize, Node *conflictingSet[], int conflictingSetSize) {
+  Node **newConflictingSet = malloc(sizeof(Node*) * conflictingSetSize);
   int theNewConflictingSetSize = 0;
 
   for (int i = 0; i < conflictingSetSize; ++i) {
-    Node *conflictingNode = &nodes[conflictingIdSet[i]];
+    Node *conflictingNode = conflictingSet[i];
     for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
-      Node *neighbor = &nodes[conflictingNode->neighbors[j]];
+      Node *neighbor = conflictingNode->neighbors[j];
       if (conflictingNode->color == neighbor->color && conflictingNode->id > neighbor->id) {
         int insertIdx = theNewConflictingSetSize++;
-        newConflictingIdSet[insertIdx] = conflictingNode->id;
+        newConflictingSet[insertIdx] = conflictingNode;
       }
     }
   }
 
   *newConflictingSetSize = theNewConflictingSetSize;
-  return newConflictingIdSet;
+  return newConflictingSet;
 }
 
 int main(int argc, char *argv[]) {
@@ -110,13 +110,12 @@ int main(int argc, char *argv[]) {
   const int nEdges = atoi(argv[2]);
   const int nThreads = atoi(argv[3]);
 
-  // create a node lookup table.
-  // Nodes with id=x will be at index x
-  Node *nodes = malloc(sizeof(*nodes) * nNodes);
-
+  // allocate all the nodes
+  Node *nodes = malloc(sizeof(Node) * nNodes);
+  // initialize node data: id, color, number of neighbors, allocate memory for neighbors
   for (int i = 0; i < nNodes; ++i) {
     // keeping things simple and allocating memory nNodes-1 number of neighbors
-    nodes[i] = (Node) {i, 0, 0, malloc(sizeof(int) * (nNodes - 1))};
+    nodes[i] = (Node) {i, 0, 0, malloc(sizeof(Node *) * (nNodes - 1))};
   }
 
   // add random edges
@@ -125,21 +124,22 @@ int main(int argc, char *argv[]) {
   }
 
   int conflictingSetSize = nNodes;
-  int *conflictingIdSet = malloc(sizeof(*conflictingIdSet) * conflictingSetSize);
+  Node **conflictingSet = malloc(sizeof(Node*) * conflictingSetSize);
   for (int i = 0; i < nNodes; ++i) {
-    conflictingIdSet[i] = i;
+    conflictingSet[i] = &nodes[i];
   }
 
   puts("Starting algo");
   struct timeb start, end;
   ftime(&start);
-  // algorithm start
+  // coloring start
   while (conflictingSetSize != 0) {
-    assign(nodes, conflictingIdSet, conflictingSetSize);
-    int *newConflictingIdSet = detectConflicts(&conflictingSetSize, nodes, conflictingIdSet, conflictingSetSize);
-    free(conflictingIdSet);
-    conflictingIdSet = newConflictingIdSet;
+    assign(conflictingSet, conflictingSetSize);
+    Node **newConflictingSet = detectConflicts(&conflictingSetSize, conflictingSet, conflictingSetSize);
+    free(conflictingSet);
+    conflictingSet = newConflictingSet;
   }
+  // coloring end
   ftime(&end);
 
   long long diff = (1000 * (end.time - start.time) + (end.millitm - start.millitm));
