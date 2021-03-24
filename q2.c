@@ -67,8 +67,9 @@ void assign(Node *conflictingSet[], int conflictingSetSize) {
       foundSmallest = 1;
       for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
         Node *neighbor = conflictingNode->neighbors[j];
+        int neighborColor;
 #pragma omp atomic read
-        int neighborColor = neighbor->color;
+        neighborColor = neighbor->color;
         if (neighborColor == smallestAdjacentColor) {
           foundSmallest = 0;
           smallestAdjacentColor++;
