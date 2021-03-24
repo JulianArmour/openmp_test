@@ -1,7 +1,7 @@
 #include <omp.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "sys\timeb.h"
+#include "sys/time.h"
 
 typedef struct Node {
     // the id of this node (used for total ordering of nodes)
@@ -130,8 +130,8 @@ int main(int argc, char *argv[]) {
   }
 
   puts("Starting algo");
-  struct timeb start, end;
-  ftime(&start);
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
   // coloring start
   while (conflictingSetSize != 0) {
     assign(conflictingSet, conflictingSetSize);
@@ -140,9 +140,9 @@ int main(int argc, char *argv[]) {
     conflictingSet = newConflictingSet;
   }
   // coloring end
-  ftime(&end);
+  gettimeofday(&end, NULL);
 
-  long long diff = (1000 * (end.time - start.time) + (end.millitm - start.millitm));
+  float duration = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f
 
   printf("%lld", diff);
 
