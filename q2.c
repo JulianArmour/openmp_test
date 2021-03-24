@@ -57,7 +57,8 @@ void addRandomEdge(const int nNodes, Node nodes[]) {
 }
 
 void assign(Node *conflictingSet[], int conflictingSetSize) {
-#pragma omp parallel for
+  printf("Using %d threads", omp_get_thread_num());
+  #pragma omp parallel for
   for (int i = 0; i < conflictingSetSize; ++i) {
     Node *conflictingNode = conflictingSet[i];
     int smallestAdjacentColor = 1;
@@ -68,7 +69,7 @@ void assign(Node *conflictingSet[], int conflictingSetSize) {
       for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
         Node *neighbor = conflictingNode->neighbors[j];
         int neighborColor;
-#pragma omp atomic read
+        #pragma omp atomic read
         neighborColor = neighbor->color;
         if (neighborColor == smallestAdjacentColor) {
           foundSmallest = 0;
@@ -77,7 +78,7 @@ void assign(Node *conflictingSet[], int conflictingSetSize) {
         }
       }
     } while (!foundSmallest);
-#pragma omp atomic write
+    #pragma omp atomic write
     conflictingNode->color = smallestAdjacentColor;
   }
 }
@@ -110,6 +111,9 @@ int main(int argc, char *argv[]) {
   const int nNodes = atoi(argv[1]);
   const int nEdges = atoi(argv[2]);
   const int nThreads = atoi(argv[3]);
+
+  omp_set_dynamic(0); /* Disable dynamic teams. */
+  omp_set_num_threads(nThreads);
 
   // allocate all the nodes
   Node *nodes = malloc(sizeof(Node) * nNodes);
