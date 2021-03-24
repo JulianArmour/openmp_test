@@ -114,7 +114,19 @@ int main(int argc, char *argv[]) {
   const int nEdges = atoi(argv[2]);
   const int nThreads = atoi(argv[3]);
 
-  //todo add checks
+  //checks
+  if (nNodes < 4) {
+    perror("Program requires at least 4 nodes");
+    exit(2);
+  }
+  if (nEdges > (long)nNodes * (nNodes - 1) / 2) {
+    perror("Too many edges");
+    exit(3);
+  }
+  if (nThreads < 1) {
+    perror("Program requires at least 1 thread");
+    exit(4);
+  }
 
   omp_set_dynamic(0); /* Disable dynamic teams. */
   omp_set_num_threads(nThreads);
@@ -153,7 +165,7 @@ int main(int argc, char *argv[]) {
 
   long diff = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
-  printf("%ld\n", diff);
+  printf("Duration: %ld milliseconds\n", diff);
 
   //free node neighbors
   for (int i = 0; i < nNodes; ++i) {
