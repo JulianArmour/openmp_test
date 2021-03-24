@@ -21,9 +21,9 @@ typedef struct Node {
 int areAdjacent(Node *node1, Node *node2) {
   for (int i = 0; i < node1->nNeighbors; ++i) {
     if (node1->neighbors[i] == node2)
-      return 1;
+      return 1; //true
   }
-  return 0;
+  return 0; // false
 }
 
 void addRandomEdge(const int nNodes, Node nodes[]) {
@@ -64,14 +64,14 @@ void assign(Node *conflictingSet[], int conflictingSetSize) {
     int foundSmallest;
     // keep incrementing smallestAdjacentColor until we find one that isn't used by a neighbor (at the time of reading)
     do {
-      foundSmallest = 1;
+      foundSmallest = 1; //true
       for (int j = 0; j < conflictingNode->nNeighbors; ++j) {
         Node *neighbor = conflictingNode->neighbors[j];
         int neighborColor;
         #pragma omp atomic read
         neighborColor = neighbor->color;
         if (neighborColor == smallestAdjacentColor) {
-          foundSmallest = 0;
+          foundSmallest = 0; // false
           smallestAdjacentColor++;
           break;
         }
@@ -128,18 +128,20 @@ int main(int argc, char *argv[]) {
     exit(4);
   }
 
-  omp_set_dynamic(0); /* Disable dynamic teams. */
-  omp_set_num_threads(nThreads);
+  omp_set_dynamic(0); //don't use dynamic threads
+  omp_set_num_threads(nThreads);  //always use nThreads
 
   // allocate all the nodes
   Node *nodes = malloc(sizeof(Node) * nNodes);
   // initialize node data: id, color, number of neighbors, allocate memory for neighbors
   for (int i = 0; i < nNodes; ++i) {
-    // keeping things simple and allocating memory nNodes-1 number of neighbors
+    // keeping things simple and allocating memory nNodes-1 number of neighbors, this avoid reallocating memory or
+    // using a linked list
     nodes[i] = (Node) {i, 0, 0, malloc(sizeof(Node *) * (nNodes - 1))};
   }
 
   // add random edges
+  puts("Building random graph");
   for (int i = 0; i < nEdges; ++i) {
     addRandomEdge(nNodes, nodes);
   }
@@ -150,7 +152,7 @@ int main(int argc, char *argv[]) {
     conflictingSet[i] = &nodes[i];
   }
 
-  puts("Starting algo");
+  puts("Coloring graph");
   struct timeval start, end;
   gettimeofday(&start, NULL);
   // coloring start
@@ -162,19 +164,31 @@ int main(int argc, char *argv[]) {
   }
   // coloring end
   gettimeofday(&end, NULL);
+  puts("Done coloring");
 
   long diff = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
-  printf("Duration: %ld milliseconds\n", diff);
+  printf("Time taken: %ld milliseconds\n", diff);
 
-  //todo print out maximum node degree
+  //print out maximum node degree and maximum color used
+  int maxNodeDegree = 0;
+  int maxColorUsed = 0;
+  for (int i = 0; i < nNodes; ++i) {
+    int nodeDegree = nodes[i].nNeighbors;
+    int nodeColor = nodes[i].color;
+    if (nodeDegree > maxNodeDegree)
+      maxNodeDegree = nodeDegree;
+    if (nodeColor > maxColorUsed)
+      maxColorUsed = nodeColor;
+  }
+  printf("Max node degree: %d\n", maxNodeDegree);
+  printf("Max color used: %d\n", maxColorUsed);
 
-  //todo print out maximum color used
-
-  //free node neighbors
+  //de-allocate node neighbors
   for (int i = 0; i < nNodes; ++i) {
     free(nodes[i].neighbors);
   }
+  //de-allocate all nodes
   free(nodes);
 
   return 0;
